@@ -30,15 +30,28 @@ clean-targets:         # directories to be removed by `dbt clean`
 # In this example config, we tell dbt to build all models in the example/
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
+
 models:
   dbt_project:
     # Config indicated by + and applies to all files under models/example/
-
-models:
-  dbt_project:
     staging:
+      +database: SUPPLYCHAIN
+      +materialized: view
       +schema: staging
-      +materialized: view    
-    marts:
-      +materialized:incremental 
 
+    marts:
+      +database: capstone
+      +schema: analytics
+      # +custom_schema: "{{ schema }}"
+      fact:
+        +materialized: incremental
+    
+      dim:
+        +materialized: table
+
+      analytical:
+        +materialized: table
+    
+
+on-run-end:
+  - "{{ log_run_results(results) }}"
