@@ -1,59 +1,194 @@
-# DEC_Capstone_Project_SupplyChain_360_Engineering_Workflow
-A Production based solution aimed to build a Unified Supply Chain Data Platform that centralizes operational data and enables efficient analytics for a struggling fast-growing retail distribution company.
-# Project Overview
-SupplyChain360 faces operational inefficiencies due to fragmented data across multiple systems. The goal is to build a production-grade data platform that centralizes all supply chain data, enabling real-time analytics for inventory planning, supplier performance, shipment tracking, and demand forecasting. This platform will reduce stockouts, optimize inventory, and improve delivery efficiency, potentially saving millions annually.
+# SupplyChain360 — Data Engineering Platform
 
-### Project key requirements:
-1. Ingest data from CSV files on S3, Google Sheets, JSON on S3, and a PostgreSQL database.
+A production-grade data platform that centralizes supply chain data from multiple systems into a single, analytics-ready warehouse using an ELT architecture.
 
-2. Store my raw data as Parquet in S3 (object storage) with metadata (loaddate)
+---
 
-3. Using Snowflake as the data warehouse.
+## Problem
 
-4. Transform the raw data using dbt into fact and dimension tables.
+SupplyChain360 operates with fragmented data across multiple systems:
+- No single source of truth  
+- Manual reporting  
+- Poor visibility into inventory, suppliers, and sales  
 
-5. Orchestrate workflows with Apache Airflow running on Docker.
+This results in:
+- Stockouts  
+- Overstocking  
+- Delayed shipments  
+- Inefficient decision-making  
 
-6. Containerize all code and use CI/CD for deployment.
+---
 
-7. Provision infrastructure with Terraform.
+## Solution
 
-## Architecture Diagram
+This platform unifies all data into a structured pipeline:
+
+**Sources → S3 (Parquet) → Snowflake → dbt models → Analytics**
+
+Orchestrated with Airflow, provisioned with Terraform, and deployed via Docker + CI/CD.
+
+---
+
+## Architecture (Simplified)
 
 ![alt text](images/Architectural%20Image.png)
 
-## Technology Choices
-
-| Component               | Technology                         | Justification                                                                                   |
-| ----------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Cloud Platform          | AWS (multiple accounts)            | Existing data in S3 (Account A); we'll use separate Account B for platform resources.           |
-| Object Storage          | AWS S3 (Account B)                 | Cost-effective, durable, Parquet format.                                                        |
-| Data Warehouse          | Snowflake                          | Separation of compute/storage, scalable, native support for semi-structured data.               |
-| Orchestration           | Apache Airflow (self-hosted on Docker) | Flexibility, full control, runs in containers.                                                  |
-| Data Transformation     | dbt                                | SQL-based, version-controlled, testable.                                                        |
-| Infrastructure as Code  | Terraform                          | Multi-cloud, state management, idempotent provisioning.                                         |
-| Containerization        | Docker                             | Reproducibility across environments.                                                            |
-| CI/CD                   | GitHub Actions                     | Integrated with GitHub, easy to set up.                                                         |
-| Secret Management       | AWS SSM Parameter Store            | Already used for Postgres credentials.                                                          |
-
-## Data Ingestion (Raw Layer)
-
-Using Airflow dags, to extract the different data from the various source and store as Paquet file in S3 including the metadata (Ingested_at)
-
-| Source                          | Format/Location                                      | Frequency | Ingestion Method                                                                                                                                                                                                                       | Notes                                                                                          |
-| ------------------------------- | ---------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Product Catalog                 | CSV on S3 (DEC Account)                                | Static    | Use S3 sensor + PythonOperator with boto3 assume_role to read CSV, convert to Parquet, write to my personal AWS Account S3.                                                                                                                          | Assume IAM role in DEC AWS Account to access bucket.                                                 |
-| Store Locations                 | Google Sheets                                        | Static    | PythonOperator using Google Service Account (JSON key from SSM) → Google Sheets API → pandas → Parquet → S3.                                                                                                                           |                                                                                                |
-| Suppliers Data                  | CSV on S3 (DEC AWS Account)                                | Static    | Same as Product Catalog.                                                                                                                                                                                                                |                                                                                                |
-| Warehouses                      | CSV on S3 (DEC AWS Account)                                | Static    | Same as Product Catalog.                                                                                                                                                                                                                |                                                                                                |
-| Warehouse Inventory Snapshots   | CSV on S3 (DEC AWS Account), daily files                   | Daily     | Incremental: list objects modified since last run, copy to my S3 Account, convert to Parquet, and partition by snapshot_date.                                                                                                                  | Assume role, use S3 prefix wildcard pattern.                                                            |
-| Shipment Delivery Logs          | JSON on S3 (DEC AWS Account), daily                        | Daily     | Same as inventory; flatten JSON to Parquet.                                                                                                                                                                                            |                                                                                                |
-| Store Sales Transactions        | PostgreSQL (AWS, credentials in SSM)                 | Daily     | Using PostgresHook to query new table each day (sales_YYYY_MM_DD); extract, convert to Parquet, store partitioned by sale_date.                                                                                                          | To avoid full scan; will be fetching only the day's table.                                                   |
-Static datasets (products, suppliers, warehouses) are ingested using idempotent overwrite pipelines. Since these datasets rarely change, snapshotting is avoided to reduce storage overhead and maintain a single source of truth
-
-### Snapshot of Parquet Data in S3 Bucket
-![alt text](image.png)
-
-### 
+Sources (S3, Google Sheets, PostgreSQL)
+│
+▼
+Python Ingestion (Airflow DAGs)
+│
+▼
+S3 (Parquet - Raw Layer)
+│
+▼
+Airbyte (S3 → Snowflake)
+│
+▼
+Snowflake (RAW → STAGING → MARTS)
+│
+▼
+dbt (Transform + Test)
 
 
+---
+
+## Tech Stack (and WHY)
+
+| Component | Tool | Why |
+|----------|------|-----|
+| Storage | S3 (Parquet) | Cheap, durable, and preserves schema vs CSV |
+| Ingestion | Python (Airflow) | Full control to clean/validate messy source data |
+| Data Movement | Airbyte | Handles Snowflake loading efficiently |
+| Warehouse | Snowflake | Scales compute independently, strong SQL engine |
+| Transformation | dbt | SQL-based, testable, version-controlled |
+| Orchestration | Airflow (Docker) | Flexible scheduling + dependency management |
+| Infra | Terraform | Reproducible, version-controlled infrastructure |
+| CI/CD | GitHub Actions | Automates testing and Docker builds |
+
+---
+
+## Key Design Decisions (with WHY)
+
+### 1. S3 as Raw Layer (Parquet)
+- Acts as a durable, reusable data source  
+- Enables reprocessing without re-extraction  
+- Parquet ensures typed and compressed data  
+
+![alt text](images/s3%20parquet%20objects.png)
+
+---
+
+### 2. Python Before Airbyte
+- Source data is messy (JSON, inconsistent schema)  
+- Python layer:
+  - Cleans  
+  - Flattens  
+  - Validates  
+
+Prevents bad data from reaching Snowflake  
+
+---
+
+### 3. Airbyte Only for S3 → Snowflake
+- Avoids building custom loaders  
+- Handles:
+  - Incremental loads  
+  - Schema detection  
+  - Snowflake COPY  
+
+
+---
+
+### 4. ELT with dbt (Not ETL)
+- Transform inside Snowflake for scalability  
+- Provides:
+  - Modular SQL models  
+  - Testing  
+  - Documentation  
+
+![alt text](images/dbt%20docs.png)
+
+![alt text](images/database.png)
+
+
+---
+
+### 5. Airflow in Docker (Self-hosted)
+- Full control and zero infrastructure cost  
+- Same environment across dev and production  
+
+---
+
+### 6. Terraform for Infrastructure
+- Infrastructure is reproducible and version-controlled  
+- Eliminates manual setup errors  
+
+---
+
+## Trade-offs
+
+| Decision | Trade-off |
+|--------|----------|
+| S3 → Snowflake (2-step pipeline) | Adds latency but improves reliability and reprocessing |
+| Python ingestion + Airbyte | More components vs simpler direct ingestion |
+| Airflow self-hosted | No high availability, requires manual management |
+| Airbyte Cloud | External dependency and authentication complexity |
+| dbt staging as views | Query-time cost vs storage savings |
+
+---
+
+## Data Model
+
+Star schema design:
+
+- **Dimensions:** products, suppliers, stores, warehouses  
+- **Facts:** sales, shipments, inventory  
+
+Supports:
+- Stockout analysis  
+- Supplier performance  
+- Demand trends  
+
+---
+
+## Orchestration Flow
+
+1. Ingest data → S3  
+2. Trigger Airbyte sync  
+3. Load into Snowflake  
+4. Run dbt models  
+5. Run dbt tests  
+
+---
+
+## Data Quality
+
+Three layers:
+
+1. **Ingestion (Python)**  
+   - Validate Parquet before upload  
+
+2. **dbt Tests**  
+   - `not_null`, `unique`, relationships  
+
+3. **Pipeline Enforcement**  
+   - Fail pipeline if tests fail  
+
+---
+
+## Key Learnings
+
+- Airbyte must be manual-triggered to avoid conflicts  
+- Parquet issues often come from incorrect data types  
+- Separating ingestion from transformation improves reliability  
+- Partitioning simplifies debugging and reprocessing  
+
+---
+
+## Final Outcome
+
+A fully automated, production-style pipeline that:
+- Centralizes supply chain data  
+- Ensures consistent and trusted datasets  
+- Supports scalable analytics  

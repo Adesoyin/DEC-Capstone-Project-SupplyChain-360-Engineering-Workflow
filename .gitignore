@@ -18,3 +18,4 @@ dbt_project/analyses/
 .airflow/
 scripts/
 google_creds.json
+dbt_project/user.yml
