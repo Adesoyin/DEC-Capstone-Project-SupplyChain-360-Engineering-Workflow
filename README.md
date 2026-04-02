@@ -10,12 +10,15 @@ SupplyChain360 operates with fragmented data across multiple systems:
 - No single source of truth  
 - Manual reporting  
 - Poor visibility into inventory, suppliers, and sales  
+- CSV/JSON files in S3 (external account)
+- Google Sheets for store data
+- PostgreSQL for daily sales
 
 This results in:
 - Stockouts  
 - Overstocking  
 - Delayed shipments  
-- Inefficient decision-making  
+- Slow decision-making  
 
 ---
 
@@ -25,7 +28,10 @@ This platform unifies all data into a structured pipeline:
 
 **Sources → S3 (Parquet) → Snowflake → dbt models → Analytics**
 
-Orchestrated with Airflow, provisioned with Terraform, and deployed via Docker + CI/CD.
+- Airflow orchestrates the entire workflow  
+- Terraform provisions infrastructure  
+- Docker ensures consistent environments  
+- GitHub Actions handles CI/CD  
 
 ---
 
@@ -83,20 +89,37 @@ dbt (Transform + Test)
 - Source data is messy (JSON, inconsistent schema)  
 - Python layer:
   - Cleans  
-  - Flattens  
-  - Validates  
+  - Flattens JSON 
+  - Validates and added Metadata such as loaded date 
 
 Prevents bad data from reaching Snowflake  
 
 ---
 
-### 3. Airbyte Only for S3 → Snowflake
-- Avoids building custom loaders  
-- Handles:
-  - Incremental loads  
-  - Schema detection  
-  - Snowflake COPY  
+### 3. Airbyte Only for S3 → Snowflake (Triggered by Airflow)
+**What this actually means in this project:**
+- Airbyte is **NOT scheduled**
+- All connections are set to **Manual**
+- Airflow triggers Airbyte via DAG
 
+![alt text](images/Airbyte%20s3%20to%20warehouse%20orchestration.png)
+
+**Why:**
+- Avoid conflicts (Airbyte allows only one active job per connection)
+- Keep orchestration in one place (Airflow)
+
+**What Airbyte handles:**
+- Loading Parquet files into Snowflake  
+- Managing incremental loads (new partitions only)  
+- Using Snowflake `COPY INTO` efficiently  
+
+**Why not build custom loaders?**
+- Would require handling:
+  - File staging  
+  - Incremental logic  
+  - Schema evolution  
+
+Airbyte removes this complexity.
 
 ---
 
@@ -111,6 +134,7 @@ Prevents bad data from reaching Snowflake
 
 ![alt text](images/database.png)
 
+![alt text](images/dbt%20dag%20run.png)
 
 ---
 
@@ -118,12 +142,25 @@ Prevents bad data from reaching Snowflake
 - Full control and zero infrastructure cost  
 - Same environment across dev and production  
 
+**Trade-off:**
+- No high availability  
+- Requires manual restart if services stop  
+
 ---
 
 ### 6. Terraform for Infrastructure
 - Infrastructure is reproducible and version-controlled  
 - Eliminates manual setup errors  
 
+**Important Note:**
+- Terraform state bucket was created manually  
+- Reason: Terraform cannot manage its own backend initially 
+
+![alt text](images/terraform%20tfstate.png)
+
+**Trade-off:**
+- No high availability  
+- Requires manual restart if services stop  
 ---
 
 ## Trade-offs
@@ -131,8 +168,8 @@ Prevents bad data from reaching Snowflake
 | Decision | Trade-off |
 |--------|----------|
 | S3 → Snowflake (2-step pipeline) | Adds latency but improves reliability and reprocessing |
-| Python ingestion + Airbyte | More components vs simpler direct ingestion |
-| Airflow self-hosted | No high availability, requires manual management |
+| Python ingestion + Airbyte | More components but cleaner data vs simpler direct ingestion |
+| Airflow self-hosted | No high availability, requires manual management but zero cost |
 | Airbyte Cloud | External dependency and authentication complexity |
 | dbt staging as views | Query-time cost vs storage savings |
 
@@ -144,6 +181,9 @@ Star schema design:
 
 - **Dimensions:** products, suppliers, stores, warehouses  
 - **Facts:** sales, shipments, inventory  
+
+![alt text](images/lineage%20graph.png)
+
 
 Supports:
 - Stockout analysis  
@@ -160,6 +200,8 @@ Supports:
 4. Run dbt models  
 5. Run dbt tests  
 
+![alt text](images/dags.png)
+
 ---
 
 ## Data Quality
@@ -168,6 +210,7 @@ Three layers:
 
 1. **Ingestion (Python)**  
    - Validate Parquet before upload  
+   - Prevent corrupt files 
 
 2. **dbt Tests**  
    - `not_null`, `unique`, relationships  
@@ -182,13 +225,6 @@ Three layers:
 - Airbyte must be manual-triggered to avoid conflicts  
 - Parquet issues often come from incorrect data types  
 - Separating ingestion from transformation improves reliability  
-- Partitioning simplifies debugging and reprocessing  
+- Partitioning of the daily tables in s3 simplifies debugging and reprocessing  
 
 ---
-
-## Final Outcome
-
-A fully automated, production-style pipeline that:
-- Centralizes supply chain data  
-- Ensures consistent and trusted datasets  
-- Supports scalable analytics  

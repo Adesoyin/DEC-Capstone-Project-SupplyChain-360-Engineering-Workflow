@@ -56,7 +56,7 @@ with DAG(
     # Reason: facts reference dims via surrogate keys — must run after dims
     dbt_run_facts = BashOperator(
         task_id="dbt_run_facts",
-        bash_command=f"dbt run {DBT_FLAGS} --select facts",
+        bash_command=f"dbt run {DBT_FLAGS} --select fact",
     )
 
     # Run dbt tests
