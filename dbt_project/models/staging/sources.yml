@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw operational data for the Supply Chain domain, ingested directly from source systems."
+    database: SUPPLYCHAIN
+    schema: RAW
+    tables:
+      - name: inventory
+        identifier: "INVENTORY"
+        description: "Daily inventory snapshot of each warehouse showing stock levels per product."
+
+      - name: products
+        identifier: "PRODUCTS"
+        description: "Master dataset containing product information sold across stores."
+
+      - name: sales
+        identifier: "TRANSACTION_SALES"
+        description: "Record of sales product transactions and historical order data at retail stores."
+
+      - name: stores
+        identifier: "STORES"
+        description: "Dataset containing information about retail store locations."
+
+      - name: suppliers
+        identifier: "SUPPLIERS"
+        description: "Master data of all suppliers (brands)."
+
+      - name: warehouses
+        identifier: "WAREHOUSES"
+        description: "Dataset containing information about SupplyChain360 warehouses."
+
+      - name: shipments
+        identifier: "SHIPMENT_DELIVEY_LOGS"
+        description: "Shipment records representing goods transported from warehouses to retail stores."

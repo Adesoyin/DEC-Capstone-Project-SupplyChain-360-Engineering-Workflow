@@ -1,0 +1,208 @@
+version: 2
+
+models:
+  - name: stg_shipment_delivery
+    description: "Staging model for tracking the movement of goods from warehouses to physical stores."
+    columns:
+      - name: shipment_id
+        description: "Primary key for each unique shipment."
+        tests: [unique, not_null]
+      - name: warehouse_id
+        description: "Foreign key identifying the origin warehouse."
+        tests: 
+          - relationships: 
+              arguments:
+                to: ref('stg_warehouses')
+                field: warehouse_id
+      - name: store_id
+        description: "Foreign key identifying the destination retail store."
+        tests:
+          - relationships: 
+              arguments:
+                to: ref('stg_stores')
+                field: store_id
+      - name: product_id
+        description: "Foreign key identifying the item being shipped."
+        tests:
+          - relationships: 
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+      - name: carrier
+        description: "The logistics provider or company responsible for transport."
+      - name: quantity_shipped
+        description: "Total units dispatched in this shipment."
+      - name: shipment_date
+        description: "Date the goods left the warehouse."
+      - name: actual_delivery_date
+        description: "The recorded date/time the shipment arrived at the store."
+      - name: expected_delivery_date
+        description: "The scheduled or planned arrival date for the shipment."
+      - name: shipment_business_date
+        description: "The business date of the shipment in YYYY-MM-DD."
+      - name: dec_source_ingestion_date
+        description: "The original timestamp when the record entered the source system."
+      - name: source_file
+        description: "The name of the raw data file or manifest processed."
+      - name: source_modified_date
+        description: "Last modification timestamp from the source file system (Airbyte metadata)."
+      - name: etl_loaded_at
+        description: "Timestamp when this record was processed by dbt into the staging layer."
+
+  - name: stg_suppliers
+    description: "Master list of authorized vendors and supply partners."
+    columns:
+      - name: supplier_id
+        description: "Primary key for each unique vendor."
+        tests: [unique, not_null]
+      - name: supplier_name
+        description: "The legal or trade name of the supplier."
+      - name: category
+        description: "The primary industry or product type the supplier provides."
+      - name: country
+        description: "The nation where the supplier is headquartered."
+      - name: dec_source_ingestion_date
+        description: "Timestamp from the source system."
+      - name: source_file
+        description: "Source filename."
+      - name: source_modified_date
+        description: "Metadata timestamp for the raw source file."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."
+
+  - name: stg_products
+    description: "Staging table for the product catalog and pricing."
+    columns:
+      - name: product_id
+        description: "Primary key for the product."
+        tests: [unique, not_null]
+      - name: product_name
+        description: "Common name or description of the product SKU."
+      - name: brand
+        description: "The brand name under which the product is sold."
+      - name: category
+        description: "Product classification (e.g., Electronics, Grocery)."
+      - name: unit_price
+        description: "The standard list price for a single unit of the product."
+      - name: supplier_id
+        description: "Foreign key to the supplier providing this product."
+        tests:
+          - relationships: 
+              arguments:
+                to: ref('stg_suppliers')
+                field: supplier_id
+      - name: source_file
+        description: "Source filename."
+      - name: dec_source_ingestion_date
+        description: "Timestamp from source ingestion."
+      - name: airbyteloaded_modified_date
+        description: "Source metadata modification timestamp."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."
+
+  - name: stg_transaction_sales
+    description: "Record of store-level customer transactions."
+    columns:
+      - name: transaction_id
+        description: "Primary key for the sales transaction."
+        tests: [unique, not_null]
+      - name: store_id
+        description: "Foreign key to the store where the sale occurred."
+        tests:
+          - relationships: 
+              arguments:
+                to: ref('stg_stores')
+                field: store_id
+      - name: product_id
+        description: "Foreign key to the product sold."
+        tests:
+          - relationships: 
+              arguments:
+                to: ref('stg_products') 
+                field: product_id
+      - name: unit_price
+        description: "The price per unit at the time of sale."
+      - name: quantity_sold
+        description: "The number of units purchased in this transaction."
+      - name: sale_amount
+        description: "The total revenue (unit_price * quantity) for this line item."
+      - name: discount_pct
+        description: "The percentage discount applied to the transaction."
+      - name: transaction_timestamp
+        description: "The date and time the sale was finalized."
+      # - name: source_file
+      #   description: "Source filename."
+      - name: transaction_date
+        description: "the transaction date of the order"
+      - name: dec_source_ingested_time
+        description: "Source system ingestion timestamp."
+      - name: airbyteloaded_modified_date
+        description: "Source metadata modification timestamp."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."
+
+  - name: stg_warehouse_inventory
+    description: "Snapshot of current stock levels across various brands and categories."
+    columns:
+      - name: brand
+        description: "Brand of the items currently in stock."
+      - name: supplier_name
+        description: "Name of the supplier for the inventoried goods."
+      - name: category
+        description: "Product category for stock grouping."
+      - name: country
+        description: "Region or country associated with these stock levels."
+      - name: dec_source_ingestion_date
+        description: "Source system ingestion timestamp."
+      - name: source_file
+        description: "Source filename."
+      - name: source_modified_date
+        description: "Source metadata modification timestamp."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."
+
+  - name: stg_warehouses
+    description: "Physical location and metadata for storage facilities."
+    columns:
+      - name: warehouse_id
+        description: "Primary key for the storage facility."
+        tests: [unique, not_null]
+      - name: state
+        description: "State or province where the warehouse is located."
+      - name: city
+        description: "City location of the warehouse."
+      - name: inventory_business_date
+        description: "business date for the imnventory record."
+      - name: source_file
+        description: "Source filename."
+      - name: dec_source_ingestion_date
+        description: "Source system ingestion timestamp."
+      - name: airbyteloaded_modified_date
+        description: "Source metadata modification timestamp."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."
+
+  - name: stg_stores
+    description: "Physical retail locations and their operational regions."
+    columns:
+      - name: store_id
+        description: "Primary key for the retail store."
+        tests: [unique, not_null]
+      - name: store_name
+        description: "The specific name or branch ID of the store."
+      - name: store_open_date
+        description: "The date the store first opened for business."
+      - name: region
+        description: "Administrative or commercial region (e.g., North, South East)."
+      - name: state
+        description: "State or province of the retail location."
+      - name: city
+        description: "City of the retail location."
+      - name: source
+        description: "Source filename."
+      - name: dec_source_ingestion_date
+        description: "Source system ingestion timestamp."
+      - name: airbyteloaded_modified_date
+        description: "Source metadata modification timestamp."
+      - name: etl_loaded_at
+        description: "dbt processing timestamp."

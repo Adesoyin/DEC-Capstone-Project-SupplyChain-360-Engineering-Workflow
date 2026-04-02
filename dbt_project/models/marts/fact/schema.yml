@@ -1,0 +1,188 @@
+version: 2
+
+models:
+
+  - name: fact_inventory
+    description: >
+      Fact table capturing daily warehouse inventory snapshots at product level.
+      Includes stock availability, reorder thresholds, and derived metrics such as
+      stock status, stockout flags, and inventory health indicators. This model
+      supports stockout trend analysis, inventory optimization, and warehouse performance monitoring.
+
+    columns:
+
+      - name: product_id
+        description: Unique identifier for the product
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: warehouse_id
+        description: Unique identifier for the warehouse
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_warehouses')
+                field: warehouse_id
+
+      - name: snapshot_date
+        description: Date representing the inventory snapshot
+        tests:
+          - not_null
+
+      - name: inventory_business_date
+        description: "Date representing the inventory business date of record"
+
+      - name: quantity_available
+        description: Number of units available in the warehouse at snapshot time
+
+      - name: reorder_threshold
+        description: Minimum stock level threshold before reorder is triggered
+
+      - name: stock_status
+        description: >
+          Categorized inventory health status:
+          - Out of Stock: quantity_available = 0
+          - Low Stock: quantity_available <= reorder_threshold
+          - Healthy: sufficient inventory above threshold
+
+      - name: is_stockout
+        description: Binary flag indicating whether the product is out of stock (1 = yes, 0 = no)
+
+      - name: is_below_reorder_level
+        description: Binary flag indicating whether inventory is below or equal to reorder threshold
+
+      - name: stock_buffer
+        description: Difference between available quantity and reorder threshold (inventory cushion)
+
+      - name: stock_coverage_ratio
+        description: Ratio of available stock to reorder threshold (used to assess inventory sufficiency)
+
+      - name: dec_source_ingestion_date
+        description: Timestamp when the data was ingested into the raw layer
+
+      - name: source_file
+        description: Source file from which the record originated
+
+      - name: source_modified_date
+        description: Last modified timestamp of the source file
+
+      - name: etl_loaded_at
+        description: Timestamp when the record was loaded into the warehouse
+
+
+  - name: fact_sales
+    description: >
+      Fact table capturing transaction-level sales data across stores.
+      Contains product-level sales, pricing, discounts, and timestamps.
+      Supports demand analysis, revenue tracking, and regional sales insights.
+
+    columns:
+
+      - name: transaction_id
+        description: Unique identifier for each sales transaction
+        tests:
+          - not_null
+          - unique
+
+      - name: store_id
+        description: Identifier of the store where the transaction occurred
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stores')
+                field: store_id
+
+      - name: product_id
+        description: Identifier of the product sold
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: unit_price
+        description: Price per unit at the time of sale
+
+      - name: quantity_sold
+        description: Number of units sold in the transaction
+
+      - name: sale_amount
+        description: Total sales value (after discounts if applicable)
+
+      - name: discount_pct
+        description: Discount percentage applied to the transaction
+
+      - name: transaction_date
+        description: Date when the transaction occurred
+        tests:
+          - not_null
+
+      - name: sale_date
+        description: Derived datetime (YYYY-MM-DD HH:MM:SS) from transaction_timestamp
+
+
+  - name: fact_shipments
+    description: >
+      Fact table capturing shipment events from warehouses to stores.
+      Includes shipment quantities, delivery timelines, and calculated delivery delays.
+      Supports supplier performance analysis and logistics efficiency tracking.
+
+    columns:
+
+      - name: shipment_id
+        description: Unique identifier for each shipment
+        tests:
+          - not_null
+          - unique
+
+      - name: warehouse_id
+        description: Warehouse from which the shipment originated
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_warehouses')
+                field: warehouse_id
+
+      - name: store_id
+        description: Destination store for the shipment
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_stores')
+                field: store_id
+
+      - name: product_id
+        description: Product included in the shipment
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: carrier
+        description: Shipping carrier responsible for delivery
+
+      - name: quantity_shipped
+        description: Number of units shipped
+
+      - name: shipment_date
+        description: Date when the shipment was dispatched
+
+      - name: shipment_business_date
+        description: Shipment Business Date in YYYY-MM-DD.
+
+      - name: actual_delivery_date
+        description: Actual delivery date
+
+      - name: expected_delivery_date
+        description: Expected delivery date based on plan
+
+      - name: delivery_delay_days
+        description: >
+          Number of days delay between expected and actual delivery.
+          Positive value indicates late delivery, negative indicates early delivery.

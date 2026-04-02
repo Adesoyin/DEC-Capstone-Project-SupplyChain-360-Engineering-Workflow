@@ -1,0 +1,130 @@
+version: 2
+
+models:
+
+  - name: dim_date
+    description: >
+      Date dimension table derived from sales transactions.
+      Provides calendar attributes used for time-based analysis such as trends and seasonality.
+
+    columns:
+      - name: transaction_date
+        description: Calendar date (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: year
+        description: Year component of the date
+
+      - name: month
+        description: Month component of the date (1-12)
+
+      - name: day
+        description: Day of the month
+
+      - name: day_of_week
+        description: Day of week (0=Sunday, 6=Saturday depending on warehouse)
+
+
+  - name: dim_suppliers
+    description: >
+      Supplier dimension containing supplier master data including name,
+      category, and country. Used for supplier performance and sourcing analysis.
+
+    columns:
+      - name: supplier_id
+        description: Unique identifier for each supplier
+        tests:
+          - not_null
+          - unique
+
+      - name: supplier_name
+        description: Name of the supplier
+
+      - name: supplier_category
+        description: Category classification of the supplier
+
+      - name: country
+        description: Country where the supplier operates
+
+  - name: dim_products
+    description: >
+      Product dimension containing product attributes such as name, brand,
+      category, pricing, and supplier information. Used for product-level analysis.
+
+    columns:
+      - name: product_id
+        description: Unique identifier for each product
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: Name of the product
+
+      - name: brand
+        description: Brand of the product
+
+      - name: category
+        description: Product category
+
+      - name: unit_price
+        description: Unit price of the product
+
+      - name: supplier_id
+        description: Supplier providing the product
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+
+      - name: supplier_name
+        description: Name of the supplier
+
+
+  - name: dim_stores
+    description: >
+      Store dimension containing store location and regional classification.
+      Supports regional demand and performance analysis.
+
+    columns:
+      - name: store_id
+        description: Unique identifier for each store
+        tests:
+          - not_null
+          - unique
+
+      - name: store_name
+        description: Name of the store
+
+      - name: store_open_date
+        description: Date when the store was opened
+
+      - name: region
+        description: Geographic region of the store
+
+      - name: state
+        description: State where the store is located
+
+      - name: city
+        description: City where the store is located
+
+  - name: dim_warehouses
+    description: >
+      Warehouse dimension containing warehouse location details.
+      Used for logistics and inventory distribution analysis.
+
+    columns:
+      - name: warehouse_id
+        description: Unique identifier for each warehouse
+        tests:
+          - not_null
+          - unique
+
+      - name: warehouse_state
+        description: State where the warehouse is located
+
+      - name: warehouse_city
+        description: City where the warehouse is located

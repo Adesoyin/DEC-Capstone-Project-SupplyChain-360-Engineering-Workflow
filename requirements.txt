@@ -1,0 +1,35 @@
+apache-airflow==2.9.1
+
+# Airflow Providers
+apache-airflow-providers-amazon
+apache-airflow-providers-airbyte
+apache-airflow-providers-postgres
+apache-airflow-providers-google
+apache-airflow-providers-snowflake
+
+# Data processing
+pandas
+pyarrow
+
+# AWS
+boto3
+awscli
+s3fs
+
+# Database
+psycopg2-binary
+
+# dbt
+dbt-core==1.11.7
+dbt-snowflake==1.11.3
+dbt-adapters==1.22.9
+dbt-common==1.37.3
+snowflake-connector-python==3.12.0
+
+# Google Sheets
+gspread
+oauth2client
+google-auth
+
+# Environment variables
+python-dotenv
