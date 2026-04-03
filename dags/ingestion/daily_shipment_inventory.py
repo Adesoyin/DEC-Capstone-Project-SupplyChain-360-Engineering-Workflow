@@ -23,6 +23,7 @@ REGION = os.getenv("AWS_REGION")
 
 # JSON Shipments
 
+
 def _s3_source():
     return boto3.client(
         "s3",
@@ -31,6 +32,7 @@ def _s3_source():
         region_name=REGION,
     )
 
+
 def _s3_dest():
     return boto3.client(
         "s3",
@@ -38,6 +40,7 @@ def _s3_dest():
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         region_name=REGION,
     )
+
 
 def _clean_schema(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -60,7 +63,9 @@ def _clean_schema(df: pd.DataFrame) -> pd.DataFrame:
         mask = df[col].apply(lambda v: isinstance(v, (dict, list)))
         if mask.any():
             df[col] = df[col].apply(
-                lambda v: json.dumps(v, default=str) if isinstance(v, (dict, list)) else v
+                lambda v: (
+                    json.dumps(v, default=str) if isinstance(v, (dict, list)) else v
+                )
             )
     return df
 
@@ -78,10 +83,7 @@ def _coerce_pyarrow_schema(df: pd.DataFrame) -> pa.Table:
     inferred = pa.Schema.from_pandas(sample, preserve_index=False)
 
     # Build a nullable version of every field
-    nullable_fields = [
-        pa.field(f.name, f.type, nullable=True)
-        for f in inferred
-    ]
+    nullable_fields = [pa.field(f.name, f.type, nullable=True) for f in inferred]
     schema = pa.schema(nullable_fields)
 
     return pa.Table.from_pandas(df, schema=schema, preserve_index=False, safe=False)
@@ -135,6 +137,7 @@ def _atomic_upload(s3, bucket: str, key: str, parquet_bytes: bytes) -> None:
 
 # main function
 
+
 def ingest_shipments_json_to_parquet(
     ds: str | None = None,
     source_bucket: str | None = None,
@@ -148,11 +151,11 @@ def ingest_shipments_json_to_parquet(
     ds is used as Execution date string in YYYY-MM-DD format (injected by Airflow or
     passed during my testing but will default to today if not passed.
     """
-    ds                 = ds or kwargs.get("ds") or dt.now().strftime("%Y-%m-%d")
-    source_bucket      = source_bucket      or SOURCE_BUCKET
+    ds = ds or kwargs.get("ds") or dt.now().strftime("%Y-%m-%d")
+    source_bucket = source_bucket or SOURCE_BUCKET
     destination_bucket = destination_bucket or DESTINATION_BUCKET
 
-    source_key      = f"raw/shipments/shipments_{ds}.json"
+    source_key = f"raw/shipments/shipments_{ds}.json"
     destination_key = f"raw/shipments/shipments_{ds}.parquet"
 
     src = _s3_source()
@@ -165,24 +168,22 @@ def ingest_shipments_json_to_parquet(
     except ClientError as e:
         code = e.response["Error"]["Code"]
         if code == "404":
-            logger.warning("Source file missing — skipping: s3://%s/%s", source_bucket, source_key)
+            logger.warning(
+                "Source file missing — skipping: s3://%s/%s", source_bucket, source_key
+            )
             return
         raise
 
     # download and parse JSON
-    response   = src.get_object(Bucket=source_bucket, Key=source_key)
-    raw_bytes  = response["Body"].read()
+    response = src.get_object(Bucket=source_bucket, Key=source_key)
+    raw_bytes = response["Body"].read()
 
     # support both newline-delimited JSON ({"a":1}\n{"a":2}) and JSON arrays ([{...}])
     raw_text = raw_bytes.decode("utf-8").strip()
     if raw_text.startswith("["):
         records = json.loads(raw_text)
     else:
-        records = [
-            json.loads(line)
-            for line in raw_text.splitlines()
-            if line.strip()
-        ]                                     
+        records = [json.loads(line) for line in raw_text.splitlines() if line.strip()]
 
     if not records:
         logger.warning("No records in %s — skipping", source_key)
@@ -196,8 +197,8 @@ def ingest_shipments_json_to_parquet(
     df = _clean_schema(df)
 
     # pipeline metadata
-    df["ingested_at"]  = dt.now().isoformat()
-    df["source_file"]  = source_key
+    df["ingested_at"] = dt.now().isoformat()
+    df["source_file"] = source_key
     df["business_date"] = ds
 
     logger.info("DataFrame shape after cleaning: %s", df.shape)
@@ -210,7 +211,7 @@ def ingest_shipments_json_to_parquet(
     parquet_bytes = _write_parquet(table)
     logger.info("Parquet size: %d bytes", len(parquet_bytes))
 
-    # Validate before uploading 
+    # Validate before uploading
     _validate_parquet(parquet_bytes)
 
     # upload to s3 to overwrites any previous version safely
@@ -218,22 +219,22 @@ def ingest_shipments_json_to_parquet(
 
     logger.info(
         "Done: s3://%s/%s → s3://%s/%s (%d rows, %d cols)",
-        source_bucket, source_key,
-        destination_bucket, destination_key,
-        len(df), len(df.columns),
+        source_bucket,
+        source_key,
+        destination_bucket,
+        destination_key,
+        len(df),
+        len(df.columns),
     )
-
 
 
 # Inventory
 
+
 def ingest_inventory_csv_to_parquet(
-    ds=None,
-    source_bucket=None,
-    destination_bucket=None,
-    **kwargs
+    ds=None, source_bucket=None, destination_bucket=None, **kwargs
 ):
-    ds = ds or kwargs.get("ds") or dt.now().strftime('%Y-%m-%d')
+    ds = ds or kwargs.get("ds") or dt.now().strftime("%Y-%m-%d")
     source_bucket = source_bucket or SOURCE_BUCKET
     destination_bucket = destination_bucket or DESTINATION_BUCKET
 
@@ -241,15 +242,17 @@ def ingest_inventory_csv_to_parquet(
     destination_key = f"raw/inventory/inventory_{ds}.parquet"
 
     try:
-        s3_dest = boto3.client("s3",
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        region_name=REGION         
-                                    )
-        s3_source = boto3.client("s3",
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID2"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY2"),
-        region_name=REGION
+        s3_dest = boto3.client(
+            "s3",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=REGION,
+        )
+        s3_source = boto3.client(
+            "s3",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID2"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY2"),
+            region_name=REGION,
         )
         logger.info(f"Bucket: {source_bucket}")
         logger.info(f"Key: {source_key}")
@@ -262,7 +265,7 @@ def ingest_inventory_csv_to_parquet(
 
     try:
         response = s3_source.get_object(Bucket=source_bucket, Key=source_key)
-        df = pd.read_csv(response['Body'])
+        df = pd.read_csv(response["Body"])
 
         if df.empty:
             logger.warning(f"No data in {source_key}")
@@ -275,12 +278,10 @@ def ingest_inventory_csv_to_parquet(
         buffer = BytesIO()
         df.to_parquet(buffer, index=False)
 
-        # Delete before write  
+        # Delete before write
         s3_dest.delete_object(Bucket=destination_bucket, Key=destination_key)
         s3_dest.put_object(
-            Bucket=destination_bucket,
-            Key=destination_key,
-            Body=buffer.getvalue()
+            Bucket=destination_bucket, Key=destination_key, Body=buffer.getvalue()
         )
 
         logger.info(f"Ingested {source_key}")
@@ -291,60 +292,21 @@ def ingest_inventory_csv_to_parquet(
 
 
 # -------------------------------
-if __name__ == "__main__":    
+if __name__ == "__main__":
     import sys
     import os
 
-    execution_date = (
-        sys.argv[1] if len(sys.argv) > 1
-        else dt.now().strftime('%Y-%m-%d')
-    )
+    execution_date = sys.argv[1] if len(sys.argv) > 1 else dt.now().strftime("%Y-%m-%d")
 
     if not all([SOURCE_BUCKET, DESTINATION_BUCKET]):
         raise ValueError("Check your .env file")
 
     ingest_shipments_json_to_parquet(ds=execution_date)
-    logger.info(f'shipment_delivery_logs for {execution_date} is completed')
+    logger.info(f"shipment_delivery_logs for {execution_date} is completed")
     ingest_inventory_csv_to_parquet(ds=execution_date)
-    logger.info(f'warehouse_inventory for {execution_date} is completed')
+    logger.info(f"warehouse_inventory for {execution_date} is completed")
 
     print(f"✅ Completed for {execution_date}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # # Shipments
@@ -363,11 +325,11 @@ if __name__ == "__main__":
 #     source_key = f"raw/shipments/shipments_{ds}.json"
 #     destination_key = f"raw/shipments/shipments_{ds}.parquet"
 
-#     try:  
+#     try:
 #         s3_dest = boto3.client("s3",
 #         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID2"),
 #         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY2"),
-#         region_name=REGION         
+#         region_name=REGION
 #         )
 
 #         s3_source = boto3.client("s3",
@@ -385,7 +347,7 @@ if __name__ == "__main__":
 #         else:
 #             logger.error(f"S3 error: {e}")
 #             raise
-        
+
 
 #     try:
 #         response = s3_source.get_object(Bucket=source_bucket, Key=source_key)
@@ -394,9 +356,9 @@ if __name__ == "__main__":
 #         if df.empty:
 #             logger.warning(f"No data in {source_key}")
 #             return
-        
+
 #         df_flat = pd.json_normalize(df.to_dict(orient='records'))
-        
+
 #         df_flat = df_flat.fillna("")
 #         df_flat.columns = [col.replace(".", "_") for col in df_flat.columns]
 

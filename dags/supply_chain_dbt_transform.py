@@ -4,7 +4,7 @@ from airflow.operators.bash import BashOperator
 
 DBT_PROJECT_DIR = "/opt/airflow/dbt_project"
 DBT_PROFILES_DIR = "/opt/airflow/dbt_project"
-DBT_LOG_PATH     = "/tmp/dbt_logs" 
+DBT_LOG_PATH = "/tmp/dbt_logs"
 
 DBT_FLAGS = (
     f"--project-dir {DBT_PROJECT_DIR} "
@@ -26,13 +26,11 @@ with DAG(
     dag_id="supply_chain_dbt_transform",
     description="Run dbt models against Snowflake after Airbyte sync completes at 4:00 AM daily",
     default_args=default_args,
-    schedule_interval="0 4 * * *",  
+    schedule_interval="0 4 * * *",
     start_date=datetime(2026, 3, 10),
     catchup=False,
     tags=["dbt", "snowflake", "transform"],
 ) as dag:
-
-
     dbt_deps = BashOperator(
         task_id="dbt_deps",
         bash_command=f"mkdir -p {DBT_LOG_PATH} && dbt deps {DBT_FLAGS}",
@@ -50,7 +48,7 @@ with DAG(
         bash_command=f"dbt run {DBT_FLAGS} --select dim",
     )
 
-    # Run fact models 
+    # Run fact models
     dbt_run_facts = BashOperator(
         task_id="dbt_run_facts",
         bash_command=f"dbt run {DBT_FLAGS} --select fact",
@@ -68,4 +66,11 @@ with DAG(
         bash_command=f"dbt docs generate {DBT_FLAGS}",
     )
 
-    dbt_deps >> dbt_run_staging >> dbt_run_dimensions >> dbt_run_facts >> dbt_test >> dbt_docs
+    (
+        dbt_deps
+        >> dbt_run_staging
+        >> dbt_run_dimensions
+        >> dbt_run_facts
+        >> dbt_test
+        >> dbt_docs
+    )
