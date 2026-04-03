@@ -9,6 +9,7 @@ import logging
 from datetime import datetime as dt
 import os
 from dotenv import load_dotenv
+from botocore.config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,7 +23,11 @@ REGION = os.getenv("AWS_REGION")
 
 
 # JSON Shipments
-
+config = Config(
+    read_timeout=300,
+    connect_timeout=300,
+    retries={'max_attempts': 3}
+)
 
 def _s3_source():
     return boto3.client(
@@ -30,6 +35,7 @@ def _s3_source():
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID2"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY2"),
         region_name=REGION,
+        config=config
     )
 
 
@@ -39,6 +45,7 @@ def _s3_dest():
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         region_name=REGION,
+        config=config
     )
 
 
@@ -86,7 +93,8 @@ def _coerce_pyarrow_schema(df: pd.DataFrame) -> pa.Table:
     nullable_fields = [pa.field(f.name, f.type, nullable=True) for f in inferred]
     schema = pa.schema(nullable_fields)
 
-    return pa.Table.from_pandas(df, schema=schema, preserve_index=False, safe=False)
+    return pa.Table.from_pandas(df,
+                                schema=schema, preserve_index=False, safe=False)
 
 
 def _write_parquet(table: pa.Table) -> bytes:
@@ -169,10 +177,12 @@ def ingest_shipments_json_to_parquet(
         code = e.response["Error"]["Code"]
         if code == "404":
             logger.warning(
-                "Source file missing — skipping: s3://%s/%s", source_bucket, source_key
+                "Source file missing, skipping: s3://%s/%s", source_bucket, source_key
             )
             return
-        raise
+        else:
+            logger.error(f"S3 error when checking for source file: {e}")
+            raise
 
     # download and parse JSON
     response = src.get_object(Bucket=source_bucket, Key=source_key)
@@ -342,7 +352,8 @@ if __name__ == "__main__":
 #         logger.info("Succesfully connected to source bucket")
 #     except ClientError as e:
 #         if e.response['Error']['Code'] == '404':
-#             logger.warning(f"Source file truly Missing: {source_bucket}/{source_key} — skipping")
+#             logger.warning(f"Source file truly Missing:
+# {source_bucket}/{source_key} — skipping")
 #             return
 #         else:
 #             logger.error(f"S3 error: {e}")

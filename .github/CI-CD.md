@@ -16,57 +16,70 @@
                         connecting to Snowflake or running any SQL
 ---
 
+
+# Get the code
 - name: Checkout code
-# Get the code 
-Reason: the runner starts as a blank Ubuntu machine — it knows nothing about the repo until this step pulls it down
 
+Reason: the runner starts as a blank Ubuntu machine It knows nothing about the repo until this step pulls it down
+
+
+# Set up Python
 - name: Set up Python 3.12
-# Set up Python 
-Reason: must match the Python version in your Dockerfile (3.12) so the import checks behave the same way locally and in CI
 
-- name: Install Python dependencies
+Reason:this must match the Python version in Dockerfile (3.12) so the import checks behave the same way locally and in CI
+
+
 # Install dependencies
-Reason: we only install what CI actually needs, not the full requirements.txt. Heavy packages like snowflake-connector require system libs that would slow CI to 10+ minutes. The DAG import check only needs Airflow + the specific providers the DAGs reference.
+- name: Install Python dependencies
 
-- name: Lint with Ruff
+Reason: I only install what CI actually needs, not the full requirements.txt. Heavy packages like snowflake-connector require system libs that would slow CI to 10+ minutes. The DAG import check only needs Airflow and the specific providers the DAGs reference.
+
+
 # Lint
+- name: Lint with Ruff
+
 Reason: catches bugs before they reach production;
+
 E = code style errors
-F = undefined names, unused imports (these cause runtime crashes)
+
+F = undefined names, unused imports that causes runtime crashes
+
+# Format check
 W = warnings
 dbt_project and terraform are excluded because they contain SQL and HCL files that Ruff doesn't understand
 
 - name: Format check with Ruff
-# Format check
-Reason: --check mode tells you WHAT would change without changing it. Forces  developers to run `ruff format .` locally before a PR can merge. Consistent formatting means git diffs show only logic changes, not whitespace noise.
+Reason: check mode tells WHAT would change without changing it. Forces the script writer/me to run `ruff format . and ruff check . --fix` locally before a pull request can merge. Consistent formatting means git diffs show only logic changes, not whitespace noise.
 
-- name: DAG import check
+
 # DAG import check
-Reason: importing a DAG module runs Airflow's parser on it. This catches
-syntax errors, missing providers, and bad operator config that would
-only surface when the scheduler tries to load the DAG at runtime —
-by which point it would silently disappear from the Airflow UI.
+- name: DAG import check
 
-Dummy env vars are set so DAGs that call os.getenv() don't crash on import just because real credentials aren't present in CI.
+Reason: importing a DAG module runs Airflow's parser on it. It catches syntax errors, missing providers, and bad operator config that would only surface when the scheduler tries to load the DAG at runtime by which point it would silently disappear from the Airflow UI.
 
+I added dummy env vars to DAGs that call os.getenv() so it doesn't crash on import just because real credentials aren't present in CI.
+
+
+# Install dbt
 - name: Install dbt
-# nstall dbt
-Reason: dbt is installed separately from the Airflow constraint step because dbt's dependency tree conflicts with Airflow constraints. Same reason it's in a separate RUN layer in the Dockerfile.
 
-- name: Create CI profiles.yml
+Reason: dbt is installed separately from the Airflow constraint step because dbt's dependency tree conflicts with Airflow constraints. Same reason I made it a separate RUN layer in the Dockerfile.
+
+
 # Create a CI-only profiles.yml
-Reason: dbt compile requires a profiles.yml to exist and be syntactically valid. It does NOT connect to Snowflake during compile, the credentials are dummy values. This means CI validates all your SQL and Jinja logic without touching your real CAPSTONE database.
+- name: Create CI profiles.yml
+
+Reason: dbt compile requires a profiles.yml to exist and be syntactically valid. It does NOT connect to Snowflake during compile, the credentials are dummy values. This means CI validates all my SQL and Jinja logic without touching my actual CAPSTONE database.
 
 # dbt deps
-Reason: installs packages defined in packages.yml (e.g. dbt_utils). Must run before compile because compile resolves macros from packages.
+Reason: installs packages defined in packages.yml (e.g. dbt_utils). It must run before compile because compile resolves macros from packages.
 
 # dbt compile
-Reason: parses every model, macro, ref(), source(), and schema.yml without running any SQL against Snowflake. Catches:
-   - Undefined ref() or source() - model references a table that doesn't exist
-   - Undefined macros - you call a macro that isn't installed or defined
-   - Bad Jinja syntax - {{ }} expressions that would crash at runtime
-   - schema.yml referencing columns not in the model SELECT
-This is the dbt equivalent of a compiler check — fast and safe.
+Reason: parses every model, macro, ref(), source(), and schema.yml without running any SQL against Snowflake. It will catch:
+   - Undefined ref() or source() - model referencing a table that doesn't exist.
+   - Undefined macros - Any macro that isn't installed or defined in my macros.
+   - Bad Jinja syntax - {{ }} expressions that would crash at runtime.
+   - schema.yml referencing columns not in the model.
 
 ---
 
@@ -74,54 +87,17 @@ This is the dbt equivalent of a compiler check — fast and safe.
 # CD — Build and push Docker image to Docker Hub
 
  WHEN IT RUNS:
-   Only when you publish a GitHub Release with a version tag.
-   Format: v1.0.0, v1.2.3, v2.0.0
+   Only when I publish a GitHub Release with a version tag.
+   e.g: v1.0.0, v1.2.3, v2.0.0
 
-   Reason: we don't build and push on every merge to main because not every merge represents a deployable release. A release tag is a deliberate act which means "this version is ready to be deployed". This gives you control over what actually lands in production vs what is just merged and tested.
+   Reason: I don't want to build and push on every merge to main because not every merge represents a deployable release. A release tag is a deliberate act which means "this version is ready to be deployed". This gives me control over what actually lands in production vs what is just merged and tested.
 
  HOW TO TRIGGER IT:
-   Option A — GitHub UI:
+    GitHub UI:
      GitHub repo → Releases → Draft a new release → Tag: v1.0.0 → Publish
 
-   Option B — Terminal:
-     git tag v1.0.0
-     git push origin v1.0.0
-
- IMAGE TAGS PRODUCED:
-   adebola/dec-supplychain360-airflow:latest     ← always points to newest release
-   adebola/dec-supplychain360-airflow:v1.0.0     ← pinned to this exact release
-   adebola/dec-supplychain360-airflow:v1           ← major version pointer
-
-  Reason for multiple tags: `latest` is convenient for pulling the newest
-   version. The version tag (v1.0.0) allows you to roll back to any previous
-   release with `docker pull adebola/dec-supplychain360-airflow:v1.0.0`.
-
- REQUIRED GITHUB SECRETS:
-   Go to: GitHub repo → Settings → Secrets and variables → Actions
-
-   DOCKERHUB_USERNAME   → adebola
-   DOCKERHUB_TOKEN      → generate at hub.docker.com → Account Settings
-                          → Security → New Access Token
-                          
-
-
-# Set up Docker Buildx
-Reason: Buildx is an extended Docker build client that supports layer caching via a registry cache. Without Buildx, every CD run rebuilds every layer from scratch even if nothing changed that means re-downloading the 1GB Airflow base image every time. With registry cache, unchanged layers are reused and the build goes from ~8 minutes to ~2 minutes.
-
-# Log in to Docker Hub
-Reason: you must authenticate before you can push an image. Uses the DOCKERHUB_TOKEN secret, passowrd is not advisabble.
-
-# Extract metadata and generate image tags
-Reason: this action reads the git tag that triggered the workflow (e.g. v1.0.0) and automatically generates the correct Docker image tags from it — latest, v1.0.0, and v1. Doing this manually would mean hard-coding version strings and updating them every release — error-prone and easy to forget.
-
-# Build and push
-Reason: builds the image from your Dockerfile and pushes all three tags simultaneously in one operation.
-
-cache-from / cache-to: uses Docker Hub itself as a layer cache store. On first run this has nothing to pull from. On subsequent runs it pulls cached layers for anything that hasn't changed (base image, pip installs) and only rebuilds the layers where your code actually changed (COPY dags/).
-
-push: true means the image is pushed to Docker Hub immediately after build. In CI you always want push: true — building without pushing is pointless.
 
 # Print summary
-Reason: writes a summary to the GitHub Actions run page so you can see exactly what was pushed without digging through logs.
+Reason: writes a summary to the GitHub Actions run page so I can see exactly what was pushed.
 
 ---

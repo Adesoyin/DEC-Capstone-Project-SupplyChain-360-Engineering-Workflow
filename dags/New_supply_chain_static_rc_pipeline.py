@@ -51,7 +51,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="supply_chain_static_monthly_pipeline",
+    dag_id="new_supply_chain_static_monthly_pipeline",
     description=(
         "Monthly pipeline: ingest static master data to S3, sync each source "
         "to Snowflake via Airbyte, then run dbt transformations. "

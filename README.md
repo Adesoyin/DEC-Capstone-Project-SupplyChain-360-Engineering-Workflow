@@ -7,18 +7,18 @@ A production-grade data platform that centralizes supply chain data from multipl
 ## Problem
 
 SupplyChain360 operates with fragmented data across multiple systems:
-- No single source of truth  
-- Manual reporting  
-- Poor visibility into inventory, suppliers, and sales  
+- No single source of truth
+- Manual reporting
+- Poor visibility into inventory, suppliers, and sales
 - CSV/JSON files in S3 (external account)
 - Google Sheets for store data
 - PostgreSQL for daily sales
 
 This results in:
-- Stockouts  
-- Overstocking  
-- Delayed shipments  
-- Slow decision-making  
+- Stockouts
+- Overstocking
+- Delayed shipments
+- Slow decision-making
 
 ---
 
@@ -28,10 +28,10 @@ This platform unifies all data into a structured pipeline:
 
 **Sources → S3 (Parquet) → Snowflake → dbt models → Analytics**
 
-- Airflow orchestrates the entire workflow  
-- Terraform provisions infrastructure  
-- Docker ensures consistent environments  
-- GitHub Actions handles CI/CD  
+- Airflow orchestrates the entire workflow
+- Terraform provisions infrastructure
+- Docker ensures consistent environments
+- GitHub Actions handles CI/CD
 
 ---
 
@@ -62,22 +62,22 @@ Sources (S3, Google Sheets, PostgreSQL) → ython Ingestion (Airflow DGs) → 3 
 ## Key Design Decisions (with WHY)
 
 ### 1. S3 as Raw Layer (Parquet)
-- Acts as a durable, reusable data source  
-- Enables reprocessing without re-extraction  
-- Parquet ensures typed and compressed data  
+- Acts as a durable, reusable data source
+- Enables reprocessing without re-extraction
+- Parquet ensures typed and compressed data
 
 ![alt text](images/s3%20parquet%20objects.png)
 
 ---
 
 ### 2. Python Before Airbyte
-- Source data is messy (JSON, inconsistent schema)  
+- Source data is messy (JSON, inconsistent schema)
 - Python layer:
-  - Cleans  
-  - Flattens JSON 
-  - Validates and added Metadata such as loaded date 
+  - Cleans
+  - Flattens JSON
+  - Validates and added Metadata such as loaded date
 
-Prevents bad data from reaching Snowflake  
+Prevents bad data from reaching Snowflake
 
 ---
 
@@ -94,26 +94,26 @@ Prevents bad data from reaching Snowflake
 - Keep orchestration in one place (Airflow)
 
 **What Airbyte handles:**
-- Loading Parquet files into Snowflake  
-- Managing incremental loads (new partitions only)  
-- Using Snowflake `COPY INTO` efficiently  
+- Loading Parquet files into Snowflake
+- Managing incremental loads (new partitions only)
+- Using Snowflake `COPY INTO` efficiently
 
 **Why not build custom loaders?**
 - Would require handling:
-  - File staging  
-  - Incremental logic  
-  - Schema evolution  
+  - File staging
+  - Incremental logic
+  - Schema evolution
 
 Airbyte removes this complexity.
 
 ---
 
 ### 4. ELT with dbt (Not ETL)
-- Transform inside Snowflake for scalability  
+- Transform inside Snowflake for scalability
 - Provides:
-  - Modular SQL models  
-  - Testing  
-  - Documentation  
+  - Modular SQL models
+  - Testing
+  - Documentation
 
 ![alt text](images/dbt%20docs.png)
 
@@ -124,22 +124,22 @@ Airbyte removes this complexity.
 ---
 
 ### 5. Airflow in Docker (Self-hosted)
-- Full control and zero infrastructure cost  
-- Same environment across dev and production  
+- Full control and zero infrastructure cost
+- Same environment across dev and production
 
 **Trade-off:**
-- No high availability  
-- Requires manual restart if services stop  
+- No high availability
+- Requires manual restart if services stop
 
 ---
 
 ### 6. Terraform for Infrastructure
-- Infrastructure is reproducible and version-controlled  
-- Eliminates manual setup errors  
+- Infrastructure is reproducible and version-controlled
+- Eliminates manual setup errors
 
 **Important Note:**
-- Terraform state bucket was created manually  
-- Reason: Terraform cannot manage its own backend initially 
+- Terraform state bucket was created manually
+- Reason: Terraform cannot manage its own backend initially
 
 ![alt text](images/terraform%20tfstate.png)
 
@@ -159,26 +159,26 @@ Airbyte removes this complexity.
 
 Star schema design:
 
-- **Dimensions:** products, suppliers, stores, warehouses  
-- **Facts:** sales, shipments, inventory  
+- **Dimensions:** products, suppliers, stores, warehouses
+- **Facts:** sales, shipments, inventory
 
 ![alt text](images/lineage%20graph.png)
 
 
 Supports:
-- Stockout analysis  
-- Supplier performance  
-- Demand trends  
+- Stockout analysis
+- Supplier performance
+- Demand trends
 
 ---
 
 ## Orchestration Flow
 
-1. Ingest data → S3  
-2. Trigger Airbyte sync  
-3. Load into Snowflake  
-4. Run dbt models  
-5. Run dbt tests  
+1. Ingest data → S3
+2. Trigger Airbyte sync
+3. Load into Snowflake
+4. Run dbt models
+5. Run dbt tests
 
 ![alt text](images/dags.png)
 
@@ -188,15 +188,15 @@ Supports:
 
 Three layers:
 
-1. **Ingestion (Python)**  
-   - Validate Parquet before upload  
-   - Prevent corrupt files 
+1. **Ingestion (Python)**
+   - Validate Parquet before upload
+   - Prevent corrupt files
 
-2. **dbt Tests**  
-   - `not_null`, `unique`, relationships  
+2. **dbt Tests**
+   - `not_null`, `unique`, relationships
 
-3. **Pipeline Enforcement**  
-   - Fail pipeline if tests fail  
+3. **Pipeline Enforcement**
+   - Fail pipeline if tests fail
 
 ---
 
@@ -205,16 +205,19 @@ Check out the project analytics report that answered the business questions in t
 
 [Supplychain360 Report Analysis](https://app.powerbi.com/view?r=eyJrIjoiNzdjZDVkMzctYmEzNC00ZWM4LThlY2QtM2EzNTFjOWViYTQ0IiwidCI6IjM3ZDc1MjFhLTUwNzktNDhhZi05MTMxLTRhYzJjYjZmMWUzYSIsImMiOjF9)
 
-
 ![alt text](images/InventoryRiskMonitoring.png)
+
+---
+
+[PowerPoint Presentation link:](https://avonhealthcareltd-my.sharepoint.com/:p:/g/personal/adebola_adesoyin_avonhealthcare_com/IQCL1YSiB_d3S4447HJyWqPAAcXBMLdetFiglYSp_MwgA78?e=NwmkJO)
 
 ---
 
 ## Key Learnings
 
-- Airbyte must be manual-triggered to avoid conflicts  
-- Parquet issues often come from incorrect data types  
-- Separating ingestion from transformation improves reliability  
-- Partitioning of the daily tables in s3 simplifies debugging and reprocessing  
+- Airbyte must be manual-triggered to avoid conflicts
+- Parquet issues often come from incorrect data types
+- Separating ingestion from transformation improves reliability
+- Partitioning of the daily tables in s3 simplifies debugging and reprocessing
 
 ---

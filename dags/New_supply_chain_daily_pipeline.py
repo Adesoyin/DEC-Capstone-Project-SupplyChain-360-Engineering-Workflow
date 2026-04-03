@@ -37,7 +37,7 @@ DBT_FLAGS = (
 
 
 with DAG(
-    dag_id="supply_chain_daily_pipeline",
+    dag_id="new_supply_chain_daily_pipeline",
     default_args=default_args,
     schedule="0 22 * * *",  # 10PM
     start_date=datetime(2026, 3, 16),

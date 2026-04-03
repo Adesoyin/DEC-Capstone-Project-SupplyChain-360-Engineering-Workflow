@@ -1,3 +1,4 @@
+import sys
 import boto3
 import os
 import pandas as pd
@@ -12,8 +13,6 @@ region = os.getenv("AWS_REGION")
 source_bucket = os.getenv("source_bucket")
 destination_bucket = os.getenv("destination_bucket")
 
-
-import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

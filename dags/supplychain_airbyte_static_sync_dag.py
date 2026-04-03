@@ -1,5 +1,4 @@
 from airflow import DAG
-from airflow.models import Variable
 from airflow.providers.airbyte.operators.airbyte import AirbyteTriggerSyncOperator
 from pendulum import datetime, duration
 
