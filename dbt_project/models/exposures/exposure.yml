@@ -4,7 +4,7 @@ exposures:
   - name: SupplyChain360_Analytics
     type: analysis
     depends_on:
-      - ref('tbl_inventoty_risk_monitoring')
+      - ref('tbl_inventory_risk_monitoring')
       - ref('tbl_product_stockout_trend')
       - ref('tbl_supplier_performance')
       - ref('tbl_warehouse_efficiency')

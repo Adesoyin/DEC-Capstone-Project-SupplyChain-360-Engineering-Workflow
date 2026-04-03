@@ -28,7 +28,8 @@ default_args = {
 dag = DAG(
     dag_id="supply_chain_daily_ingestion_dag",
     default_args=default_args,
-    # to run every day at 10:00PM to ingest the current day's data at 10:00PM (after the work has ended)
+    # to run every day at 10:00PM to ingest the
+    # current day's data at 10:00PM (after the work has ended)
     schedule="0 22 * * *",
     #'@daily',
     catchup=False,

@@ -24,7 +24,9 @@ default_args = {
 
 with DAG(
     dag_id="supply_chain_dbt_transform",
-    description="Run dbt models against Snowflake after Airbyte sync completes at 4:00 AM daily",
+    description=(
+        "Run dbt models against Snowflake after Airbyte sync completes at 4:00 AM daily"
+    ),
     default_args=default_args,
     schedule_interval="0 4 * * *",
     start_date=datetime(2026, 3, 10),

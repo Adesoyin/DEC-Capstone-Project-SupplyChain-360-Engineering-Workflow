@@ -86,7 +86,10 @@ if __name__ == "__main__":
     creds_path = os.getenv("GOOGLE_CREDS_PATH")
     print("✅ Starting google sheet store location ingestion...")
     # Validate env vars
-    if not all([spreadsheet_id, worksheet_name, destination_bucket, destination_key, creds_path]):
+    if not all([spreadsheet_id,
+    worksheet_name,
+    destination_bucket,
+    destination_key,creds_path]):
         raise ValueError("Missing environment variables")
 
     ingest_google_sheet_to_s3(

@@ -85,8 +85,8 @@ def ingest_sales_by_date(target_date, target_bucket, **kwargs):
             cur.execute(
                 """
                 SELECT EXISTS (
-                    SELECT 1 
-                    FROM information_schema.tables 
+                    SELECT
+                    FROM information_schema.tables
                     WHERE table_schema = 'public'
                     AND table_name = %s
                 )
@@ -152,7 +152,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("=" * 20)
-    logger.info(f"Starting sales ingestion for Business Date: {target_day}")
+    logger.info(
+        f"Starting sales transaction ingestion for Business Date: {target_day}"
+    )
     ingest_sales_by_date(target_day, dest_bucket)
 
 
@@ -168,7 +170,6 @@ if __name__ == "__main__":
 # #from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 # load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../.env'))
-
 # # Logging
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 # logger = logging.getLogger(__name__)
