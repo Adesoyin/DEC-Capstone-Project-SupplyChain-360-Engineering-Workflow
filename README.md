@@ -200,7 +200,7 @@ Three layers:
 
 ---
 
-### ata Analysis
+### Data Analysis
 Check out the project analytics report that answered the business questions in this link below:
 
 [Supplychain360 Report Analysis](https://app.powerbi.com/view?r=eyJrIjoiNzdjZDVkMzctYmEzNC00ZWM4LThlY2QtM2EzNTFjOWViYTQ0IiwidCI6IjM3ZDc1MjFhLTUwNzktNDhhZi05MTMxLTRhYzJjYjZmMWUzYSIsImMiOjF9)

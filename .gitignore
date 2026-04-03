@@ -22,3 +22,4 @@ dbt_project/user.yml
 dbt_project/README.md
 src/
 Scripts/
+.terraform.lock.hcl
