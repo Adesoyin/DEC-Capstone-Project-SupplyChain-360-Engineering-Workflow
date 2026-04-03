@@ -28,9 +28,9 @@ jobs:
           pip install \
             ruff \
             "apache-airflow==2.9.1" \
-            "apache-airflow-providers-amazon>=8.0.0" \
-            "apache-airflow-providers-airbyte>=4.0.0" \
-            "apache-airflow-providers-postgres>=5.0.0" \
+            "apache-airflow-providers-amazon" \
+            "apache-airflow-providers-airbyte" \
+            "apache-airflow-providers-postgres" \
             pandas \
             pyarrow \
             boto3 \
