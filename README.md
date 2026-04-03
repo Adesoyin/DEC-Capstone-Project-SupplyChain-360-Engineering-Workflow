@@ -39,37 +39,7 @@ This platform unifies all data into a structured pipeline:
 
 ![alt text](images/Architectural%20Image.png)
 
-Sources (S3, Google Sheets, PostgreSQL)
-
-│
-
-▼
-
-Python Ingestion (Airflow DAGs)
-
-│
-
-▼
-
-S3 (Parquet - Raw Layer)
-
-│
-
-▼
-
-Airbyte (S3 → Snowflake)
-
-│
-
-▼
-
-Snowflake (RAW → STAGING → MARTS)
-
-│
-
-▼
-
-dbt (Transform + Test)
+Sources (S3, Google Sheets, PostgreSQL) → ython Ingestion (Airflow DGs) → 3 (Parquet - Raw Layer) → irbyte (S3 → Snowflake) → Snowflake (RAW → STAGING → MARTS) → bt (Transform + Test)
 
 
 ---
@@ -173,11 +143,6 @@ Airbyte removes this complexity.
 
 ![alt text](images/terraform%20tfstate.png)
 
-**Trade-off:**
-- No high availability  
-- Requires manual restart if services stop  
----
-
 ## Trade-offs
 
 | Decision | Trade-off |
@@ -235,13 +200,14 @@ Three layers:
 
 ---
 
-Reports
-Check out the project analytics to answer business questions via this link below:
+### Data Analysis
+Check out the project analytics report that answered the business questions in this link below:
 
-![Supplychain360 Report Analysis](https://app.powerbi.com/view?r=eyJrIjoiNzdjZDVkMzctYmEzNC00ZWM4LThlY2QtM2EzNTFjOWViYTQ0IiwidCI6IjM3ZDc1MjFhLTUwNzktNDhhZi05MTMxLTRhYzJjYjZmMWUzYSIsImMiOjF9)
+[Supplychain360 Report Analysis](https://app.powerbi.com/view?r=eyJrIjoiNzdjZDVkMzctYmEzNC00ZWM4LThlY2QtM2EzNTFjOWViYTQ0IiwidCI6IjM3ZDc1MjFhLTUwNzktNDhhZi05MTMxLTRhYzJjYjZmMWUzYSIsImMiOjF9)
 
 
 ![alt text](images/InventoryRiskMonitoring.png)
+
 ---
 
 ## Key Learnings

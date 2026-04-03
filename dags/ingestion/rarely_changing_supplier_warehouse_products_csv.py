@@ -1,7 +1,7 @@
 import sys
-import os 
+import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ingestion.utils.static_data_ingest import ingest_static_csv_to_parquet
 from dotenv import load_dotenv
@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 source_bucket = os.getenv("source_bucket")
-destination_bucket= os.getenv("destination_bucket")
+destination_bucket = os.getenv("destination_bucket")
+
 
 def ingest_suppliers():
 
@@ -21,8 +22,9 @@ def ingest_suppliers():
         source_bucket=source_bucket,
         source_key="raw/suppliers/suppliers.csv",
         destination_bucket=destination_bucket,
-        destination_key="raw/suppliers/suppliers.parquet"
+        destination_key="raw/suppliers/suppliers.parquet",
     )
+
 
 def ingest_products():
 
@@ -30,7 +32,7 @@ def ingest_products():
         source_bucket=source_bucket,
         source_key="raw/products/products.csv",
         destination_bucket=destination_bucket,
-        destination_key="raw/products/products.parquet"
+        destination_key="raw/products/products.parquet",
     )
 
 
@@ -40,7 +42,7 @@ def ingest_warehouses():
         source_bucket=source_bucket,
         source_key="raw/warehouses/warehouses.csv",
         destination_bucket=destination_bucket,
-        destination_key="raw/warehouses/warehouses.parquet"
+        destination_key="raw/warehouses/warehouses.parquet",
     )
 
 
@@ -49,7 +51,7 @@ if __name__ == "__main__":
 
     if not all([source_bucket, destination_bucket]):
         raise ValueError("Missing source and/or destination s3 bucket")
-    
+
     ingest_products()
     # Added 'f' before the strings below
     logging.info(f"Success ingesting products into {destination_bucket}")
@@ -62,6 +64,3 @@ if __name__ == "__main__":
     ingest_warehouses()
     logging.info(f"Success ingesting warehouses into {destination_bucket}")
     print("=" * 20)
-
-    
-    
