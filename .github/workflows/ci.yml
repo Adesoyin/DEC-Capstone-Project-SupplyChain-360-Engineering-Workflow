@@ -83,6 +83,8 @@ jobs:
               'dags.supply_chain_dbt_transform',
               'dags.supplychain_airbyte_daily_sync_dag',
               'dags.supplychain_airbyte_static_sync_dag',
+              'dags.New_supply_chain_daily_pipeline',
+              'dags.New_supply_chain_static_rc_pipeline',
           ]
 
           failed = []

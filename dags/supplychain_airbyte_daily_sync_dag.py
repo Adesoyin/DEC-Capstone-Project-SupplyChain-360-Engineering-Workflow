@@ -15,8 +15,8 @@ default_args = {
 dag = DAG(
     dag_id='airbyte_daily_sync_pipeline',
     default_args=default_args,
-    # to run every day at 11:00AM after the daily ingestion dag
-    schedule='0 11 * * *',  
+    # to run every day at 11:00PM after the daily ingestion dag to warehouse
+    schedule='0 23 * * *',  
     catchup=False,
     start_date=datetime(2026, 3, 31)
 )

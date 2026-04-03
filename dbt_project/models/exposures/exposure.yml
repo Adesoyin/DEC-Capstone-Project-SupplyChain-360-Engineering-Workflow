@@ -1,0 +1,16 @@
+version: 2
+
+exposures:
+  - name: SupplyChain360_Analytics
+    type: analysis
+    depends_on:
+      - ref('tbl_inventoty_risk_monitoring')
+      - ref('tbl_product_stockout_trend')
+      - ref('tbl_supplier_performance')
+      - ref('tbl_warehouse_efficiency')
+
+    owner:
+      name: SupplyChain360
+      email: adeboladesoyin@gmail.com
+    url: https://app.powerbi.com/view?r=eyJrIjoiNzdjZDVkMzctYmEzNC00ZWM4LThlY2QtM2EzNTFjOWViYTQ0IiwidCI6IjM3ZDc1MjFhLTUwNzktNDhhZi05MTMxLTRhYzJjYjZmMWUzYSIsImMiOjF9
+    description: "Analyses the inventory risk, product stockout trends, supplier performance, and warehouse efficiency to provide insights for optimizing supply chain operations."

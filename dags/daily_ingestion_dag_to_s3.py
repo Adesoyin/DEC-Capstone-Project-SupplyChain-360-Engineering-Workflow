@@ -24,8 +24,8 @@ default_args = {
 dag = DAG(
     dag_id='supply_chain_daily_ingestion_dag',
     default_args=default_args,
-    # to run every day at 10:00AM
-    schedule='0 10 * * *',
+    # to run every day at 10:00PM to ingest the current day's data at 10:00PM (after the work has ended)
+    schedule='0 22 * * *',
     #'@daily',   
     catchup=False,
     start_date=datetime(2026, 3, 16)
@@ -35,14 +35,12 @@ task_shipments = PythonOperator(
     task_id='ingest_shipments',
     python_callable=ingest_shipments_json_to_parquet,
     op_kwargs={
-        'ds': "2026-03-15",
+        'ds': "2026-03-16",
         #'{{ ds }}',
         'source_bucket': Variable.get('source_bucket'),
-        # "{{ var.value.source_bucket }}",
         'destination_bucket': Variable.get('destination_bucket')
-        # "{{ var.value.destination_bucket }}"
     },
-dag=dag
+    dag=dag
 )
 
 task_inventory = PythonOperator(

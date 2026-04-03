@@ -19,3 +19,6 @@ dbt_project/analyses/
 scripts/
 google_creds.json
 dbt_project/user.yml
+dbt_project/README.md
+src/
+Scripts/

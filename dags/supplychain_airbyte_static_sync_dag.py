@@ -14,8 +14,8 @@ default_args = {
 dag = DAG(
     dag_id='airbyte_rarely_changing_sync_pipeline',
     default_args=default_args,
-    # To be run at 11: 00 on first day of the month, after monthly ingestion dag
-    schedule='0 11 1 * *',
+    # To be run at 11: 00PM frst day of the month, after monthly ingestion dag
+    schedule='0 23 1 * *',
     catchup=False,
     start_date=datetime(2026, 3, 31)
 )
