@@ -1,0 +1,143 @@
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  code-quality:
+    name: Lint, format check, DAG imports, dbt compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # Install dependencies
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            ruff \
+            "apache-airflow==2.9.1" \
+            "apache-airflow-providers-amazon>=8.0.0" \
+            "apache-airflow-providers-airbyte>=4.0.0" \
+            "apache-airflow-providers-postgres>=5.0.0" \
+            pandas \
+            pyarrow \
+            boto3 \
+            python-dotenv \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.1/constraints-3.12.txt"
+
+      # Lint
+      - name: Lint with Ruff
+        run: |
+          ruff check . \
+            --select E,F,W \
+            --exclude .venv,__pycache__,dbt_project,terraform,venv
+
+      # Format check
+      - name: Format check with Ruff
+        run: |
+          ruff format --check . \
+            --exclude dbt_project,terraform,venv
+
+      # DAG import check
+      - name: DAG import check
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "sqlite:////tmp/airflow-ci.db"
+          AWS_ACCESS_KEY_ID: "ci-dummy"
+          AWS_SECRET_ACCESS_KEY: "ci-dummy"
+          AWS_DEFAULT_REGION: "us-east-1"
+          AWS_ACCESS_KEY_ID2: "ci-dummy"
+          AWS_SECRET_ACCESS_KEY2: "ci-dummy"
+          SOURCE_BUCKET: "ci-dummy"
+          DESTINATION_BUCKET: "ci-dummy"
+          SNOWFLAKE_ACCOUNT: "ci-dummy"
+          SNOWFLAKE_USER: "ci-dummy"
+          SNOWFLAKE_PASSWORD: "ci-dummy"
+          SNOWFLAKE_DATABASE: "ci-dummy"
+          SNOWFLAKE_WAREHOUSE: "ci-dummy"
+          SNOWFLAKE_ROLE: "ci-dummy"
+          SNOWFLAKE_SCHEMA: "ci-dummy"
+          AIRBYTE_CLIENT_ID: "ci-dummy"
+          AIRBYTE_CLIENT_SECRET: "ci-dummy"
+        run: |
+          airflow db migrate
+
+          python -c "
+          import importlib, sys
+
+          dag_modules = [
+              'dags.daily_ingestion_dag_to_s3',
+              'dags.static_ingestion_dag_to_s3',
+              'dags.supply_chain_dbt_transform',
+              'dags.supplychain_airbyte_daily_sync_dag',
+              'dags.supplychain_airbyte_static_sync_dag',
+          ]
+
+          failed = []
+          for module in dag_modules:
+              try:
+                  importlib.import_module(module)
+                  print(f'  OK   {module}')
+              except Exception as e:
+                  print(f'  FAIL {module}: {e}')
+                  failed.append(module)
+
+          if failed:
+              print(f'\n{len(failed)} DAG(s) failed import check.')
+              sys.exit(1)
+
+          print(f'\nAll {len(dag_modules)} DAG imports passed.')
+          "
+
+      # Install dbt
+      - name: Install dbt
+        run: pip install dbt-core dbt-snowflake
+
+      # Create a CI-only profiles.yml
+      - name: Create CI profiles.yml
+        run: |
+          cat > dbt_project/profiles.yml << 'EOF'
+          dbt_project:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: ci-dummy-account
+                user: ci-dummy-user
+                password: ci-dummy-password
+                role: SYSADMIN
+                database: CAPSTONE
+                warehouse: CI_DUMMY_WH
+                schema: STAGING
+                threads: 1
+          EOF
+
+      # dbt deps
+      - name: dbt deps
+        run: |
+          dbt deps \
+            --project-dir dbt_project \
+            --profiles-dir dbt_project
+
+      # dbt compile
+      - name: dbt compile
+        run: |
+          dbt compile \
+            --project-dir dbt_project \
+            --profiles-dir dbt_project
+
+      # ── Unit tests
+      # - name: Run unit tests
+      #   run: pytest tests/ -v --tb=short
