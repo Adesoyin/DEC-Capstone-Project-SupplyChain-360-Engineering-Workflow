@@ -51,7 +51,9 @@ jobs:
       - name: Format check with Ruff
         run: |
           ruff format --check . \
-            --exclude dbt_project,terraform,venv
+            --select E,F,W \
+            --ignore E501 \
+            --exclude .venv, __pycache__,dbt_project,terraform,venv
 
       # DAG import check
       - name: DAG import check
