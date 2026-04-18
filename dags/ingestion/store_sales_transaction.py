@@ -154,4 +154,3 @@ if __name__ == "__main__":
     print("=" * 20)
     logger.info(f"Starting sales ingestion for Business Date: {target_day}")
     ingest_sales_by_date(target_day, dest_bucket)
-    
