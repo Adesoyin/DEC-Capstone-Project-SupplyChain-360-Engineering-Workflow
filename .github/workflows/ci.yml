@@ -71,6 +71,9 @@ jobs:
           AIRBYTE_CLIENT_SECRET: "ci-dummy"
         run: |
           airflow db migrate
+          
+          # Adding current directory to PYTHONPATH so it can find the dags folder
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/dags
 
           python -c "
           import importlib, sys
