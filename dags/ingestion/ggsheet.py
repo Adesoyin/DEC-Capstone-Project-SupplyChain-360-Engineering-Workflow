@@ -73,8 +73,6 @@ def ingest_google_sheet_to_s3():
     except Exception as e:
         logger.error(f"Error ingesting Google Sheet: {str(e)}")
         raise
-sts = boto3.client("sts")
-print("AWS IDENTITY:", sts.get_caller_identity())
 
 
 if __name__ == "__main__":
@@ -83,6 +81,8 @@ if __name__ == "__main__":
     destination_bucket = os.getenv("destination_bucket")
     destination_key = os.getenv("destination_key")
     creds_path = os.getenv("GOOGLE_CREDS_PATH")
+    sts = boto3.client("sts")
+    print("AWS IDENTITY:", sts.get_caller_identity())
     print("✅ Starting google sheet store location ingestion...")
     # Validate env vars
     if not all([spreadsheet_id,
