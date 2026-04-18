@@ -55,6 +55,7 @@ jobs:
         env:
           AIRFLOW__CORE__LOAD_EXAMPLES: "false"
           AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "sqlite:////tmp/airflow-ci.db"
+          AIRFLOW_VAR_ENVIRONMENT: "ci"
           AIRFLOW_VAR_SOURCE_BUCKET: "ci-dummy-bucket"
           AIRFLOW_VAR_DESTINATION_BUCKET: "ci-dummy-bucket"
           AWS_ACCESS_KEY_ID: "ci-dummy"
