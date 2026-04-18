@@ -17,7 +17,7 @@ dbt_project/profiles.yml
 dbt_project/analyses/
 .airflow/
 scripts/
-google_creds.json
+#google_creds.json
 dbt_project/user.yml
 dbt_project/README.md
 src/
