@@ -30,6 +30,8 @@ jobs:
           pip install --upgrade pip
           pip install \
             ruff \
+            gspread \
+            oauth2client \
             "apache-airflow==2.9.1" \
             "apache-airflow-providers-amazon" \
             "apache-airflow-providers-airbyte" \
@@ -53,6 +55,8 @@ jobs:
         env:
           AIRFLOW__CORE__LOAD_EXAMPLES: "false"
           AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "sqlite:////tmp/airflow-ci.db"
+          AIRFLOW_VAR_SOURCE_BUCKET: "ci-dummy-bucket"
+          AIRFLOW_VAR_DESTINATION_BUCKET: "ci-dummy-bucket"
           AWS_ACCESS_KEY_ID: "ci-dummy"
           AWS_SECRET_ACCESS_KEY: "ci-dummy"
           AWS_DEFAULT_REGION: "us-east-1"
