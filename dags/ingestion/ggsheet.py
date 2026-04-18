@@ -100,4 +100,3 @@ if __name__ == "__main__":
     )
 
     logger.info("Success ingesting data into {destination_bucket}")
-    
