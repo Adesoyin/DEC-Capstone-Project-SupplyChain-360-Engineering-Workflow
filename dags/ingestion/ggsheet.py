@@ -1,4 +1,3 @@
-
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -101,3 +100,4 @@ if __name__ == "__main__":
     )
 
     logger.info("Success ingesting data into {destination_bucket}")
+    
