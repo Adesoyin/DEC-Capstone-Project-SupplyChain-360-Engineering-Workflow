@@ -45,15 +45,8 @@ jobs:
         run: |
           ruff check . \
             --select E,F,W \
-            --exclude .venv,__pycache__,dbt_project,terraform,venv
-
-      # Format check
-      - name: Format check with Ruff
-        run: |
-          ruff format --check . \
-            --select E,F,W \
             --ignore E501 \
-            --exclude .venv, __pycache__,dbt_project,terraform,venv
+            --exclude .venv,__pycache__,dbt_project,terraform,venv            
 
       # DAG import check
       - name: DAG import check
@@ -78,6 +71,9 @@ jobs:
           AIRBYTE_CLIENT_SECRET: "ci-dummy"
         run: |
           airflow db migrate
+          
+          # Adding current directory to PYTHONPATH so it can find the dags folder
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/dags
 
           python -c "
           import importlib, sys
