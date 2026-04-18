@@ -73,7 +73,7 @@ jobs:
           airflow db migrate
           
           # Adding current directory to PYTHONPATH so it can find the dags folder
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/dags
+          export PYTHONPATH=$(pwd):$(pwd)/dags
 
           python -c "
           import importlib, sys
