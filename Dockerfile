@@ -9,6 +9,11 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && apt-get clean
 
+RUN --mount=type=secret,id=google_creds_json \
+    mkdir -p /opt/airflow/creds && \
+    cat /run/secrets/google_creds_json > /opt/airflow/creds/google_creds.json && \
+    chown -R airflow:root /opt/airflow/creds
+
 USER airflow
 
 # Airflow providers — pinned to constraints for compatibility
